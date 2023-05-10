@@ -1,39 +1,28 @@
 from flask import Flask, request
-from geopy.geocoders import Nominatim
 from flask_cors import CORS
 import redis
-import json
-import subprocess
-
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
-redis_server = redis.Redis(host="YOUR_REDIS_SERVER")
+app.secret_key = 'dljsaklqk24e21cjn!Ew@@dsa5'
 
-geolocator = Nominatim(user_agent="my_request")
-region = ", Lund, Skåne, Sweden"
+# change this to connect to your redis server
+# ===============================================
+redis_server = redis.Redis("localhost")
+# ===============================================
 
-@app.route('/planner', methods=['POST'])
-def route_planner():
-    Addresses =  json.loads(request.data.decode())
-    FromAddress = Addresses['faddr']
-    ToAddress = Addresses['taddr']
-    
-    current_location = (float(redis_server.get('longitude')), float(redis_server.get('latitude')))
-    from_location = geolocator.geocode(FromAddress + region)
-    to_location = geolocator.geocode(ToAddress + region)
-    
-    if from_location is None:
-        message = 'Departure address not found, please input a correct address'
-    elif to_location is None:
-        message = 'Destination address not found, please input a correct address'
-    else:
-        message = 'Get addresses! Start moving'
-        subprocess.Popen(["python3", "../pi/pi_controller.py", '--clong', str(current_location[0]), '--clat', str(current_location[1]),
-                                                 '--flong', str(from_location.longitude), '--flat', str(from_location.latitude),
-                                                 '--tlong', str(to_location.longitude), '--tlat', str(to_location.latitude)
-                        ])
-    return message
+redis_server.set('longitude', 13.21008)
+redis_server.set('latitude', 55.71106)
+
+@app.route('/drone', methods=['POST'])
+def drone():
+    drone_location = request.get_json()
+    longitude = drone_location['longitude']
+    latitude = drone_location['latitude']
+    redis_server.set('longitude', longitude)
+    redis_server.set('latitude', latitude)
+    return 'Get data'
 
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port='5002')
+    app.run(debug=True, host='0.0.0.0', port='5001')
+
