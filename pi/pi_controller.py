@@ -2,32 +2,51 @@ import math
 import requests
 import argparse
 
-#Write you own function that moves the dron from one place to another 
-#the function returns the drone's current location while moving
-#====================================================================================================
-def your_function():
-    longitude = 13.21008
-    latitude = 55.71106
-    return (longitude, latitude)
-#====================================================================================================
+def get_movement(src, dst):
+    speed = 0.00001
+    dst_x, dst_y = dst
+    x, y = src
+    direction = math.sqrt((dst_x - x)**2 + (dst_y - y)**2)
+    longitude_move = speed * ((dst_x - x) / direction )
+    latitude_move = speed * ((dst_y - y) / direction )
+    return longitude_move, latitude_move
 
+def move_drone(src, d_long, d_la):
+    x, y = src
+    x = x + d_long
+    y = y + d_la        
+    return (x, y)
+
+def plan_path(current_coords, from_coords, to_coords):
+    drone_coords = current_coords
+    path = []
+    d_long, d_la = get_movement(drone_coords, from_coords)
+    while ((from_coords[0] - drone_coords[0])**2 + (from_coords[1] - drone_coords[1])**2)*10**6 > 0.0002:
+        drone_coords = move_drone(drone_coords, d_long, d_la)
+        path.append(drone_coords)
+        d_long, d_la = get_movement(drone_coords, from_coords)
+    
+    d_long, d_la = get_movement(drone_coords, to_coords)
+    while ((to_coords[0] - drone_coords[0])**2 + (to_coords[1] - drone_coords[1])**2)*10**6 > 0.0002:
+        drone_coords = move_drone(drone_coords, d_long, d_la)
+        path.append(drone_coords)
+        d_long, d_la = get_movement(drone_coords, to_coords)
+
+    return path
+
+def your_function(current_coords, from_coords, to_coords):
+    path = plan_path(current_coords, from_coords, to_coords)
+    for drone_coords in path:
+        yield drone_coords
 
 def run(current_coords, from_coords, to_coords, SERVER_URL):
-    # Compmelete the while loop:
-    # 1. Change the loop condition so that it stops sending location to the data base when the drone arrives the to_address
-    # 2. Plan a path with your own function, so that the drone moves from [current_address] to [from_address], and the from [from_address] to [to_address]. 
-    # 3. While moving, the drone keeps sending it's location to the database.
-    #====================================================================================================
-    while True:
-        drone_coords = your_function()
+    for drone_coords in your_function(current_coords, from_coords, to_coords):
         with requests.Session() as session:
             drone_location = {'longitude': drone_coords[0],
                               'latitude': drone_coords[1]
-                        }
+                            }
             resp = session.post(SERVER_URL, json=drone_location)
-  #====================================================================================================
 
-   
 if __name__ == "__main__":
     SERVER_URL = "http://127.0.0.1:5001/drone"
 
