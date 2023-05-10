@@ -1,28 +1,41 @@
 from flask import Flask, request
 from flask_cors import CORS
 import redis
+import json
+
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
-app.secret_key = 'dljsaklqk24e21cjn!Ew@@dsa5'
+CORS(app)
 
 # change this to connect to your redis server
 # ===============================================
-redis_server = redis.Redis("localhost")
+redis_server = redis.Redis(host='localhost', decode_responses=True, charset="unicode_escape")
 # ===============================================
-
-redis_server.set('longitude', 13.21008)
-redis_server.set('latitude', 55.71106)
 
 @app.route('/drone', methods=['POST'])
 def drone():
-    drone_location = request.get_json()
-    longitude = drone_location['longitude']
-    latitude = drone_location['latitude']
-    redis_server.set('longitude', longitude)
-    redis_server.set('latitude', latitude)
+    drone = request.get_json()
+   #droneIP = request.remote_addr
+    droneID = str(drone['id'])
+    drone_longitude = float(drone['longitude'])
+    drone_latitude = float(drone['latitude'])
+    drone_status = str(drone['status'])
+    
+    # Get the infomation of the drone in the request, and update the information in Redis database
+    # Data that need to be stored in the database: 
+    # Drone ID, logitude of the drone, latitude of the drone, drone's IP address, the status of the drone
+    # Note that you need to store the metioned infomation for all drones in Redis, think carefully how to store them
+    # =========================================================================================
+    print(drone_status)
+    #redis_server.hset(droneID, "droneIP", droneIP)
+    redis_server.hset(droneID, "drone_longitude", drone_longitude)
+    redis_server.hset(droneID, "drone_latitude", drone_latitude)
+    redis_server.hset(droneID, "drone_status", drone_status)
+    
+     # =======================================================================================
     return 'Get data'
 
 if __name__ == "__main__":
-    app.run(debug=True, host='0.0.0.0', port='5001')
 
+
+    app.run(debug=True, host='0.0.0.0', port='5001')
